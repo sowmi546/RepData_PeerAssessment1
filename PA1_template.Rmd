@@ -1,25 +1,177 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Analysis of Person's activity"
+output: {html_document, keep_md=TRUE}
 ---
 
+**1.Loading and preprocessing of data**
+  
+```{r, echo=TRUE} 
+library(lattice)
+#loading the data
+myData<- read.csv("activity.csv")
+#check the summary of data to see if any preprocessing has to be done
+summary(myData)
+```
+From the summary, we can see that the **date** column has **15840** other values and **steps** column has **2304** NA values. Modify the Date column so that we get the actual date for each row.
+```{r}
+#preprocessing step
+myData$date <- as.Date(myData$date,"%Y-%m-%d")
+```
 
-## Loading and preprocessing the data
+**2.What is mean total number of steps taken per day?**
+```{r, echo=TRUE}
+#seeing the column names of the dataset
+names(myData)
+#create a plot to see how the distribution is between number of steps taken on each day
+plot(steps~date,myData)
+#tail(myData$date)
+stepsByDay <- aggregate(steps~date,data=myData,sum,na.rm=TRUE)
+#names(stepsByDay)
+#plotting the histogram for the number of steps taken
+dev.copy(png,"./figures/plot1.png",width=480,height=480)
+hist(stepsByDay$steps,xlab="Day",ylab="steps taken",main="Mean num of steps taken by day",col="red")
+dev.off()
+```
+
+*calculating mean and median*
+```{r}
+mean(stepsByDay$steps)
+median(stepsByDay$steps)
+```
+
+**3.What is the average daily activity pattern?**
+```{r}
+names(myData)
+#see the mean number of steps taken in each interval
+tmyData <- tapply(myData$steps, myData$interval, mean, na.rm = TRUE)
+```
+By using the tapply function we have modified the given data set such that each column name is equal to the interval. Using names() command we can see that each column is the interval. Each column value is equal to the mean number of steps taken in that interval.
+```{r}
+names(tmyData)
+head(tmyData)
+```
+
+```{r}
+dev.copy(png,"./figures/plot2.png",width=480,height=480)
+plot(names(tmyData),tmyData,type="l",xlab="5 minute interval",ylab="avg steps for each interval",main="average daily activity pattern",col="red")
+dev.off()
+```
+
+*maximum steps interval*
+```{r}
+max_interval <- which.max(tmyData)
+names(max_interval)
+```
+
+
+**4.Inputting missing values**
+
+```{r}
+#counting number of missing values in data set
+count <-sum(is.na(myData)) 
+```
+
+As specified in the instructions I am using the mean value of number of steps in a interval as the replacement for NA
+
+```{r}
+#replacing NA values with mean value for that interval
+StepsAverage <- aggregate(steps~interval,data=myData,mean)
+fillNA <- numeric()
+for(i in 1:nrow(myData))
+{
+  r <-myData[i,]
+  if(is.na(r$steps))
+  {
+    steps <- subset(StepsAverage,interval==r$interval)$steps
+  }
+  else
+    steps <-r$steps
+  fillNA <- c(fillNA,steps)
+}
+
+```
+
+*Forming the new data set with replacing NA values*
+```{r}
+newData <- myData
+newData$steps <- fillNA
+head(myData)
+head(newData)
+```
+From the above two head() commands we can see the NA values in original dataset are replaced with the modified value in the newly created dataset.
+
+```{r}
+
+newTotalSteps <- aggregate(steps ~ date, data = newData, sum, na.rm = TRUE)
+dev.copy(png,"./figures/plot3.png",width=480,height=480)
+hist(newTotalSteps$steps, main = "Total steps by day", xlab = "day", col = "blue")
+dev.off()
+```
+
+*calculating the median and mean for new dataset*
+```{r}
+mean(newTotalSteps$steps)
+median(newTotalSteps$steps)
+```
+
+**5.Are there differences in activity patterns between weekdays and weekends?**
+
+```{r}
+#checking and assigning if the day is weekday or weekend 
+dayType <- weekdays(myData$date)
+levelOfDay <- vector()
+for (i in 1:nrow(myData)) {
+  if (dayType[i] == "Saturday" | dayType[i]=="Sunday") {
+    levelOfDay[i] <- "Weekend"
+   
+  } else {
+    levelOfDay[i] <- "Weekday"
+  }
+}
+```
+
+*adding one more column to the new Data set specifying if the date is weekend or weekday*
+```{r}
+names(newData)
+newData$levelOfDay <- levelOfDay
+```
+*converting level to factor variable*
+```{r}
+newData$levelOfDay <- factor(newData$levelOfDay)
+stepsByEachDay <- aggregate(steps~interval+levelOfDay,data=newData,mean)
+names(stepsByEachDay)
+dev.copy(png,"./figures/plot4.png",width=480,height=480)
+par(mfrow=c(2,1))
+xyplot(steps~interval|levelOfDay,type="l",data=stepsByEachDay,xlab="Day Type",ylab="steps taken",main="difference in pattern on weekdays and weekends",col="red")
+dev.off()
+```
 
 
 
-## What is mean total number of steps taken per day?
 
 
 
-## What is the average daily activity pattern?
 
 
 
-## Imputing missing values
 
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
